@@ -1,16 +1,23 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
+import readline from "readline/promises";
+import { stdin as input, stdout as output } from "process";
 import { chromium } from "playwright";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const rl = readline.createInterface({ input, output });
 
 const screenshotDir = path.resolve("./screenshots");
 if (!fs.existsSync(screenshotDir)) {
   fs.mkdirSync(screenshotDir);
+}
+
+function delay(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 const userFormData = {
@@ -44,7 +51,7 @@ function normalizeField(field) {
   return mapping[field.toLowerCase()] || field;
 }
 
-async function runAgent(startUrl) {
+async function runAgent(startUrl, routeUrl) {
   const browser = await chromium.launch({
     headless: false,
     slowMo: 500,
@@ -56,7 +63,12 @@ async function runAgent(startUrl) {
   });
   const page = await context.newPage();
 
-  await page.goto(`${startUrl}/auth/signup`);
+  await page.goto(`${startUrl}`);
+  await delay(1000);
+  await page.evaluate((route) => {
+    history.pushState({}, "", route);
+    window.dispatchEvent(new Event("popstate"));
+  }, `/${routeUrl}`);
   await page.waitForTimeout(2000);
 
   const screenshotPath = path.join(screenshotDir, `signup.png`);
@@ -98,7 +110,7 @@ async function runAgent(startUrl) {
   } catch (err) {
     console.error("❌ Gemini fetch failed:", err.message);
     await browser.close();
-    return;
+    process.exit();
   }
 
   console.log("🤖 Gemini returned actions:", actions);
@@ -152,8 +164,8 @@ async function runAgent(startUrl) {
       console.error("❌ Playwright action failed:", err.message);
     }
   }
-
   await browser.close();
+  process.exit();
 }
 
 async function askGeminiForFormFill(screenshotPath, selectors) {
@@ -196,4 +208,4 @@ Allowed actions:
   return JSON.parse(reply);
 }
 
-runAgent("https://ui.chaicode.com");
+runAgent("https://ui.chaicode.com", "auth/signup");
