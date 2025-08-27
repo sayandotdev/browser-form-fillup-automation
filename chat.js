@@ -1,12 +1,15 @@
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
+import readline from "readline/promises";
+import { stdin as input, stdout as output } from "process";
 import { chromium } from "playwright";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+const rl = readline.createInterface({ input, output });
 
 const screenshotDir = path.resolve("./screenshots");
 if (!fs.existsSync(screenshotDir)) {
@@ -16,6 +19,14 @@ if (!fs.existsSync(screenshotDir)) {
 function delay(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
+
+const userFormData = {
+  firstName: "John",
+  lastName: "Doe",
+  email: "john@example.com",
+  password: "securePassword123",
+  confirmPassword: "securePassword123",
+};
 
 function normalizeField(field) {
   const mapping = {
@@ -40,52 +51,11 @@ function normalizeField(field) {
   return mapping[field.toLowerCase()] || field;
 }
 
-async function generateUserData() {
-  const prompt = `
-    Generate realistic user data for a signup form. Return a JSON object with the following fields:
-    - firstName: A realistic first name
-    - lastName: A realistic last name
-    - email: A realistic email address (e.g., using a common domain like gmail.com)
-    - password: A secure password (at least 8 characters, including letters and numbers)
-    - confirmPassword: Must match the password
-
-    Example format:
-    {
-      "firstName": "Alice",
-      "lastName": "Smith",
-      "email": "alice.smith123@gmail.com",
-      "password": "SecurePass789",
-      "confirmPassword": "SecurePass789"
-    }
-`;
-
-  const result = await model.generateContent([{ text: prompt }]);
-  let reply = result.response.text().trim();
-  reply = reply
-    .replace(/```json/g, "")
-    .replace(/```/g, "")
-    .trim();
-  return JSON.parse(reply);
-}
-
 async function runAgent(startUrl, routeUrl) {
-  let userFormData;
-  try {
-    userFormData = await generateUserData();
-    console.log("🤖 Generated user data:", userFormData);
-  } catch (err) {
-    console.error("❌ Failed to generate user data:", err.message);
-    process.exit(1);
-  }
-
   const browser = await chromium.launch({
     headless: false,
     slowMo: 500,
-    args: [
-      "--start-maximized",
-      "--disable-extensions",
-      "--disable-file-system",
-    ],
+    args: ["--start-maximized", "--disabe-extensions", "--disable-file-system"],
   });
 
   const context = await browser.newContext({
@@ -140,7 +110,7 @@ async function runAgent(startUrl, routeUrl) {
   } catch (err) {
     console.error("❌ Gemini fetch failed:", err.message);
     await browser.close();
-    process.exit(1);
+    process.exit();
   }
 
   console.log("🤖 Gemini returned actions:", actions);
@@ -159,7 +129,7 @@ async function runAgent(startUrl, routeUrl) {
             fieldKey = action.field.toLowerCase().includes("confirm")
               ? "confirmPassword"
               : "password";
-          } else if (/name/i.test(action.field)) {
+          } else if (/john|test|name/i.test(action.field)) {
             fieldKey = "firstName";
           } else {
             continue;
@@ -168,7 +138,7 @@ async function runAgent(startUrl, routeUrl) {
 
         const value = userFormData[fieldKey];
         await page.fill(action.selector, value);
-        console.log(`✅ Filled ${fieldKey} into ${action.selector}`);
+        console.log(`✍️ Filled ${fieldKey} into ${action.selector}`);
       } else if (action.type === "click") {
         let selector = action.selector;
 
