@@ -1,32 +1,36 @@
 import readline from "readline/promises";
 import { stdin as input, stdout as output } from "process";
 import { runAgent } from "./formAgent.js";
+import { generateGeneralResponse } from "./geminiClient.js";
 
 const rl = readline.createInterface({ input, output });
+
 async function main() {
   try {
-    const startUrl = await rl.question(
-      "Enter the base URL (e.g., https://example.com): "
-    );
-    const routeUrl = await rl.question(
-      "Enter the route/path (e.g., /signup, press Enter if none): "
+    const userInput = await rl.question(
+      "Enter a URL to fill a form (e.g., https://example.com) or just say something: "
     );
 
-    if (!startUrl.startsWith("http://") && !startUrl.startsWith("https://")) {
-      console.error("❌ Invalid URL: Must start with http:// or https://");
-      return;
+    const urlRegex = /(https?:\/\/[^\s/$.?#].[^\s]*)/i;
+    const urlMatch = userInput.match(urlRegex);
+
+    if (urlMatch) {
+      const matchedUrl = urlMatch[0];
+      const url = new URL(matchedUrl);
+      const startUrl = `${url.protocol}//${url.hostname}${
+        url.port ? `:${url.port}` : ""
+      }`;
+      const routeUrl = url.pathname + url.search + url.hash;
+
+      console.log(`🔗 Navigating to: ${startUrl}${routeUrl}`);
+      await runAgent(startUrl, routeUrl);
+    } else {
+      console.log("🤖 Processing your input...");
+      const response = await generateGeneralResponse(userInput);
+      console.log("🤖 AI Response:", response);
     }
-
-    const normalizedRouteUrl = routeUrl
-      ? routeUrl.startsWith("/")
-        ? routeUrl
-        : `/${routeUrl}`
-      : "";
-
-    console.log(`🔗 Navigating to: ${startUrl}${normalizedRouteUrl}`);
-    await runAgent(startUrl, normalizedRouteUrl);
   } catch (err) {
-    console.error("❌ Input error:", err.message);
+    console.error("❌ Error:", err.message);
   } finally {
     rl.close();
     process.exit();
