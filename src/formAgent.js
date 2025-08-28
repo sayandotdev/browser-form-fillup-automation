@@ -1,9 +1,10 @@
 import { chromium } from "playwright";
 import { analyzeForm, generateUserData } from "./geminiClient.js";
 import { delay, ensureDirectory } from "./utils.js";
-import path from "path";
+import path from "node:path";
+import fs from "node:fs";
 
-const screenshotDir = path.resolve("./screenshots");
+const screenshotDir = path.resolve("../screenshots");
 
 /**
  * Runs the form-filling agent for a given website URL and route
@@ -75,6 +76,7 @@ export async function runAgent(startUrl, routeUrl) {
       console.log("🤖 Gemini returned actions:", actions);
     } catch (err) {
       console.error("❌ Gemini form analysis failed:", err.message);
+      fs.unlinkSync(screenshotPath);
       throw err;
     }
 
@@ -88,6 +90,7 @@ export async function runAgent(startUrl, routeUrl) {
       console.log("🤖 Generated user data:", userFormData);
     } catch (err) {
       console.error("❌ Failed to generate user data:", err.message);
+      fs.unlinkSync(screenshotPath);
       throw err;
     }
 
@@ -128,6 +131,7 @@ export async function runAgent(startUrl, routeUrl) {
               "❌ Click failed, retrying with fallback:",
               err.message
             );
+            fs.unlinkSync(screenshotPath);
             await page
               .getByRole("button", {
                 name: /(submit|create|sign up|register)/i,
@@ -137,6 +141,7 @@ export async function runAgent(startUrl, routeUrl) {
         }
       } catch (err) {
         console.error(`❌ Action failed for ${action.type}:`, err.message);
+        fs.unlinkSync(screenshotPath);
       }
     }
   } catch (err) {
