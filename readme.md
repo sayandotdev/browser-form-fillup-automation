@@ -43,10 +43,6 @@ A Node.js-based project that automates form filling in web browsers using AI-pow
 pnpm start
 ```
 
-## Output Demo
-
-<video src="./public/video-demo.mp4" controls></video>
-
 - Configure the target website and form fields in the configuration file.
 - Run the script to automatically fill the form using AI-generated input.
 
