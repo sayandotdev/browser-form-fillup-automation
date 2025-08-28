@@ -47,6 +47,7 @@ export async function analyzeForm(screenshotPath, selectors) {
     - For inputs you can't confidently map, use the name or id as the field name.
     - After filling all fields, click the submit/signup/register button.
     - Output a JSON array of steps.
+    - Output must be a valid json.
 
     Allowed actions:
     - { "type": "fill_form", "selector": "<css>", "field": "<field_name>" }
@@ -56,6 +57,7 @@ export async function analyzeForm(screenshotPath, selectors) {
     [
         { "type": "fill_form", "selector": "#firstName", "field": "firstName" },
         { "type": "fill_form", "selector": "#email", "field": "email" },
+        { "type": "fill_form", "selector": "#age", "field": "age" },
         { "type": "click", "selector": "button[type='submit']" }
     ]
 `;
@@ -96,6 +98,11 @@ export async function generateUserData(fields) {
     "password": "Str0ngPass321",
     "confirmPassword": "Str0ngPass321"
     }
+
+    Rules:
+    - Don't generate code for python or js or other programming language
+    - Generate only inputs for fields
+    - Don't need to add those values into code block
 
     For fields like phone, address, or username, generate appropriate values (e.g., phone: "123-456-7890", address: "123 Main St, City, Country", username: "alice_johnson").
 `;
